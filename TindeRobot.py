@@ -1,5 +1,5 @@
-Python 3.8
-## by Diexel64
+## Python 3.8
+## by alber.py
 
 import os, wx, sys, time, random, getpass
 from datetime import timedelta
@@ -17,11 +17,10 @@ user = getpass.getuser()
 
 LIKE_BUTTON_XPATH = '//*[@id="content"]/div/div[1]/div/main/div[1]/div/div/div[1]/div/div[2]/div[4]/button'
 DISLIKE_BUTTON_XPATH = '//*[@id="content"]/div/div[1]/div/main/div[1]/div/div/div[1]/div/div[2]/div[2]/button'
-NAME = '/html/body/div[1]/div/div[1]/div/main/div[1]/div/div/div[1]/div/div[1]/div[3]/div[6]/div/div[1]/div/div/span'
-AGE = '/html/body/div[1]/div/div[1]/div/main/div[1]/div/div/div[1]/div/div[1]/div[3]/div[6]/div/div[1]/div/span'
-DESCRIPTION = '/html/body/div[1]/div/div[1]/div/main/div[1]/div/div/div[1]/div/div[1]/div[3]/div[6]/div/div[2]/div/div/span[1]'
-IMAGE = '/html/body/div[1]/div/div[1]/div/main/div[1]/div/div/div[1]/div/div[1]/div[3]/div[1]/div[1]/div/div[1]/div/div'
-
+NAME = '/html/body/div[1]/div/div[1]/div/main/div[1]/div/div/div[1]/div/div[1]/div[3]/div[6]/div/div[1]/div[1]/div/div/span'
+AGE = "/html/body/div[1]/div/div[1]/div/main/div[1]/div/div/div[1]/div/div[1]/div[3]/div[6]/div/div[1]/div[1]/div/span"
+DESCRIPTION = '/html/body/div[1]/div/div[1]/div/main/div[1]/div/div/div[1]/div/div[1]/div[3]/div[6]/div/div[2]/div/div'
+IMAGE = '/html/body/div[1]/div/div[1]/div/main/div[1]/div/div/div[1]/div/div[1]/div[3]/div[1]/div[1]/span[1]/div'
 
 def scale_bitmap(bitmap, width, height):
         image = wx.ImageFromBitmap(bitmap)
@@ -79,7 +78,11 @@ class TinderBot:
         Age = self.driver.find_element_by_xpath(AGE).text
         if Age == '':
             Age = 0
-        image = self.driver.find_element_by_xpath(IMAGE).get_attribute('style')
+        try:
+            self.driver.implicitly_wait(2)
+            image = self.driver.find_element_by_xpath(IMAGE).get_attribute('style')
+        except:
+            image = 'Image not found'
         try:
             PersonDescription = self.driver.find_element_by_xpath(DESCRIPTION).text
         except:
@@ -120,10 +123,10 @@ class TinderBot:
         print('Sleeping for {} seconds'.format(str(round(sleep_sec, 2))))
         sleep(sleep_sec)
 
-    def auto_swipe(self, badwords, goodwords):
+    def auto_swipe(self, badwords, goodwords, proba):
         """Method to start swiping"""
         likes, dislikes = 0, 0  # Count of swipes
-        endTime = datetime.now() + timedelta(minutes= self.mins)
+        endTime = datetime.now() + timedelta(minutes=self.mins)
         while True:
             if datetime.now() >= endTime:
                 print('Swiped for {} minutes !'.format(str(self.mins)))
@@ -144,8 +147,8 @@ class TinderBot:
                     print('Swiped Left because of a bad word, Count {}'.format(dislikes))
                     add_to_mongo('LEFT', data)
                 if decision == 'probability':
-                    rand = random.random()
-                    if rand < .78:  # Probability of swiping right on a profile
+                    rand = random.random() * 100
+                    if rand < proba:  # Probability of swiping right on a profile
                         self.swipe_right()
                         likes += 1
                         print('Swiped Right, Count {}'.format(likes))
@@ -213,20 +216,26 @@ class Panel1(wx.Panel):
 
         # Buttons
         minutes = ['1', '3', '5', '10', '15', '20', '30', '45', '60', '120', '300', '600']
-        lbl_minutes = wx.StaticText(self, label="Executions lasts (min): ", style=wx.ALIGN_LEFT)
-        sizer.Add(lbl_minutes, pos=(5, 1), flag=wx.LEFT | wx.RIGHT, border=15)
+        lbl_minutes = wx.StaticText(self, label="Executions lasts (min) : ", style=wx.ALIGN_LEFT)
+        sizer.Add(lbl_minutes, pos=(6, 1), flag=wx.LEFT | wx.RIGHT, border=15)
         self.minutes = wx.ComboBox(self, choices=minutes, value='10')
-        sizer.Add(self.minutes, pos=(5, 2), flag=wx.ALIGN_LEFT, border=15)
+        sizer.Add(self.minutes, pos=(6, 2), flag=wx.ALIGN_LEFT, border=15)
+
+        prob = ['100%', '90%', '80%', '70%', '60%', '50%', '40%', '30%', '20%', '10%', '0%']
+        lbl_prob = wx.StaticText(self, label="Probability of like : ", style=wx.ALIGN_LEFT)
+        sizer.Add(lbl_prob, pos=(3, 1), flag=wx.LEFT | wx.RIGHT, border=15)
+        self.prob = wx.ComboBox(self, choices=prob, value='30%')
+        sizer.Add(self.prob, pos=(3, 2), flag=wx.ALIGN_LEFT, border=15)
 
         lbl_badwords = wx.StaticText(self, label="Bad words : ", style=wx.ALIGN_LEFT)
-        sizer.Add(lbl_badwords, pos=(3, 1), flag=wx.LEFT | wx.RIGHT, border=15)
+        sizer.Add(lbl_badwords, pos=(4, 1), flag=wx.LEFT | wx.RIGHT, border=15)
         self.badwords = wx.TextCtrl(self, value='mom')
-        sizer.Add(self.badwords, pos=(3, 2), flag=wx.ALIGN_LEFT, border=15)
+        sizer.Add(self.badwords, pos=(4, 2), flag=wx.ALIGN_LEFT, border=15)
 
         lbl_goodwords = wx.StaticText(self, label="Good words : ", style=wx.ALIGN_LEFT)
-        sizer.Add(lbl_goodwords, pos=(4, 1), flag=wx.LEFT | wx.RIGHT, border=15)
+        sizer.Add(lbl_goodwords, pos=(5, 1), flag=wx.LEFT | wx.RIGHT, border=15)
         self.goodwords = wx.TextCtrl(self, value='model, adventurous')
-        sizer.Add(self.goodwords, pos=(4, 2), flag=wx.ALIGN_LEFT, border=15)
+        sizer.Add(self.goodwords, pos=(5, 2), flag=wx.ALIGN_LEFT, border=15)
 
         btn_TXT = wx.Button(self, label="Generate .txt")
         sizer.Add(btn_TXT, pos=(9, 2), flag=wx.RIGHT | wx.TOP | wx.BOTTOM, border=5)
@@ -269,13 +278,14 @@ class Panel1(wx.Panel):
 
     def onLaunch(self, event):
         mins = int(self.minutes.GetValue())
+        proba = int(self.prob.GetValue().replace("%", ""))
         badwords = self.badwords.GetValue()
         goodwords = self.goodwords.GetValue()
         badwords = self.getList(badwords)
-        goodwords = self.getList(goodwords)        
+        goodwords = self.getList(goodwords)
         tinder = TinderBot(mins)
         tinder.start()
-        tinder.auto_swipe(badwords, goodwords)
+        tinder.auto_swipe(badwords, goodwords, proba)
 
     def onTxt(self, event):
         log = self.ResultBox.GetValue()
@@ -308,7 +318,7 @@ class Panel2(wx.Panel):
 
         ## Inputs
         lblList = ['RIGHT', 'LEFT']
-        self.rbox_collections = wx.RadioBox(self, label = 'Search in collection : ', choices=lblList, majorDimension = 1, style = wx.RA_SPECIFY_ROWS)
+        self.rbox_collections = wx.RadioBox(self, label='Search in collection : ', choices=lblList, majorDimension = 1, style = wx.RA_SPECIFY_ROWS)
         sizer.Add(self.rbox_collections, pos=(2, 6), span=(2, 1), flag=wx.EXPAND|wx.BOTTOM|wx.RIGHT, border=20)
 
         lbl_user = wx.StaticText(self, label="Search for name : ")
